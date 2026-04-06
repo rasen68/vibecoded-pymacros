@@ -587,6 +587,27 @@ _PyPegen_name_token(Parser *p)
     return _PyPegen_name_from_token(p, t);
 }
 
+/* PEP 638: Extract identifier (PyObject *) from a MACRO_NAME token.
+ * The token string includes the trailing '!' (e.g., "foo!"). */
+PyObject *
+_PyPegen_macro_name_identifier(Parser *p, Token *t)
+{
+    if (t == NULL) {
+        return NULL;
+    }
+    const char *s = PyBytes_AsString(t->bytes);
+    if (!s) {
+        p->error_indicator = 1;
+        return NULL;
+    }
+    PyObject *id = _PyPegen_new_identifier(p, s);
+    if (id == NULL) {
+        p->error_indicator = 1;
+        return NULL;
+    }
+    return id;
+}
+
 void *
 _PyPegen_string_token(Parser *p)
 {

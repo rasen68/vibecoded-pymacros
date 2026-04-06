@@ -122,6 +122,7 @@ simple_stmt[stmt_ty] (memo):
     | assignment
     | &"type" type_alias
     | &('import' | 'from' | "lazy") import_stmt
+    | &MACRO_NAME macro_simple_stmt
     | e=star_expressions { _PyAST_Expr(e, EXTRA) }
     | &'return' return_stmt
     | &'raise' raise_stmt
@@ -142,6 +143,7 @@ compound_stmt[stmt_ty]:
     | &('for' | 'async') for_stmt
     | &'try' try_stmt
     | &'while' while_stmt
+    | &MACRO_NAME macro_compound_stmt
     | match_stmt
 
 # SIMPLE STATEMENTS
@@ -255,6 +257,93 @@ dotted_as_name[alias_ty]:
 dotted_name[expr_ty]:
     | a=dotted_name '.' b=NAME { _PyPegen_join_names_with_dot(p, a, b) }
     | NAME
+
+# MACRO STATEMENTS (PEP 638)
+# ==========================
+
+# Simple macro statement (no body block)
+# Forms: foo! x, y  |  foo!(x, y)  |  import! mod as name  |  from! mod import name [as name]
+macro_simple_stmt[stmt_ty]:
+    | a=MACRO_NAME b=dotted_name 'import' c=NAME d=['as' z=NAME { z }] {
+        _PyAST_MacroStmt(
+            _PyPegen_macro_name_identifier(p, a),
+            (asdl_expr_seq*)_PyPegen_singleton_seq(p, b),
+            c->v.Name.id,
+            (d) ? ((expr_ty) d)->v.Name.id : NULL,
+            NULL,
+            EXTRA) }
+    | a=MACRO_NAME b=dotted_name 'as' c=NAME {
+        _PyAST_MacroStmt(
+            _PyPegen_macro_name_identifier(p, a),
+            (asdl_expr_seq*)_PyPegen_singleton_seq(p, b),
+            NULL,
+            c->v.Name.id,
+            NULL,
+            EXTRA) }
+    | a=MACRO_NAME '(' b[asdl_expr_seq*]=','.star_expression+ [','] ')' {
+        _PyAST_MacroStmt(
+            _PyPegen_macro_name_identifier(p, a),
+            b,
+            NULL,
+            NULL,
+            NULL,
+            EXTRA) }
+    | a=MACRO_NAME '(' ')' {
+        _PyAST_MacroStmt(
+            _PyPegen_macro_name_identifier(p, a),
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            EXTRA) }
+    | a=MACRO_NAME b[asdl_expr_seq*]=','.star_expression+ {
+        _PyAST_MacroStmt(
+            _PyPegen_macro_name_identifier(p, a),
+            b,
+            NULL,
+            NULL,
+            NULL,
+            EXTRA) }
+    | a=MACRO_NAME {
+        _PyAST_MacroStmt(
+            _PyPegen_macro_name_identifier(p, a),
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            EXTRA) }
+
+# Compound macro statement (with body block): foo!:  <body>
+macro_compound_stmt[stmt_ty]:
+    | a=MACRO_NAME b[asdl_expr_seq*]=','.star_expression+ ':' c=block {
+        _PyAST_MacroStmt(
+            _PyPegen_macro_name_identifier(p, a),
+            b,
+            NULL,
+            NULL,
+            c,
+            EXTRA) }
+    | a=MACRO_NAME ':' c=block {
+        _PyAST_MacroStmt(
+            _PyPegen_macro_name_identifier(p, a),
+            NULL,
+            NULL,
+            NULL,
+            c,
+            EXTRA) }
+
+# Macro expression: bar!(x, y) inside an expression context
+macro_expr[expr_ty]:
+    | a=MACRO_NAME '(' b[asdl_expr_seq*]=','.star_expression+ [','] ')' {
+        _PyAST_MacroExpr(
+            _PyPegen_macro_name_identifier(p, a),
+            b,
+            EXTRA) }
+    | a=MACRO_NAME '(' ')' {
+        _PyAST_MacroExpr(
+            _PyPegen_macro_name_identifier(p, a),
+            NULL,
+            EXTRA) }
 
 # COMPOUND STATEMENTS
 # ===================
@@ -894,6 +983,7 @@ atom[expr_ty]:
     | 'None' { _PyAST_Constant(Py_None, NULL, EXTRA) }
     | &(STRING|FSTRING_START|TSTRING_START) strings
     | NUMBER
+    | macro_expr
     | &'(' (genexp | tuple | group)
     | &'[' (listcomp | list)
     | &'{' (dictcomp | setcomp | dict | set)
