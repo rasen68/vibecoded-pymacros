@@ -61,6 +61,7 @@ const char * const _PyParser_TokenNames[] = {
     "ELLIPSIS",
     "COLONEQUAL",
     "EXCLAMATION",
+    "MACRO_NAME",
     "OP",
     "TYPE_IGNORE",
     "TYPE_COMMENT",

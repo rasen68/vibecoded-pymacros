@@ -311,7 +311,7 @@ tokenizeriter_next(PyObject *op)
         }
         // Necessary adjustments to match the original Python tokenize
         // implementation
-        if (type > DEDENT && type < OP) {
+        if (type > DEDENT && type < OP && type != MACRO_NAME) {
             type = OP;
         }
         else if (type == NEWLINE) {

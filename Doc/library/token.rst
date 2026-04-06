@@ -163,6 +163,13 @@ The token constants are:
 
    .. versionadded:: 3.14
 
+.. data:: MACRO_NAME
+
+   Token value for a macro name: an identifier immediately followed by ``!``
+   (for example, ``foo!``). The token string includes the trailing ``!``.
+
+   .. versionadded:: 3.15
+
 .. data:: ENDMARKER
 
    Token value that indicates the end of input.
@@ -260,4 +267,7 @@ The following non-token constants are provided:
 
 .. versionchanged:: 3.13
    Removed :data:`!AWAIT` and :data:`!ASYNC` tokens again.
+
+.. versionchanged:: 3.15
+   Added :data:`MACRO_NAME`.
 
