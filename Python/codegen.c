@@ -3179,6 +3179,14 @@ codegen_visit_stmt(compiler *c, stmt_ty s)
     case AsyncFor_kind:
         CODEGEN_COND_BLOCK(codegen_async_for, c, s);
         break;
+    case MacroStmt_kind:
+    {
+        /* PEP 638: MacroStmt nodes should have been expanded before codegen.
+         * If we reach here, the macro was not resolved. */
+        const char *name = PyUnicode_AsUTF8(s->v.MacroStmt.name);
+        return _PyCompile_Error(c, LOC(s),
+            "unknown macro '%s'", name ? name : "<error>");
+    }
     }
 
     return SUCCESS;
@@ -5506,6 +5514,20 @@ codegen_visit_expr(compiler *c, expr_ty e)
         return codegen_list(c, e);
     case Tuple_kind:
         return codegen_tuple(c, e);
+    case MacroExpr_kind:
+    {
+        /* PEP 638: MacroExpr nodes should have been expanded before codegen. */
+        const char *name = PyUnicode_AsUTF8(e->v.MacroExpr.name);
+        return _PyCompile_Error(c, loc,
+            "unknown macro '%s'", name ? name : "<error>");
+    }
+    case StmtExpr_kind:
+    {
+        /* PEP 638: Compile the statement, then compile the expression value. */
+        VISIT(c, stmt, e->v.StmtExpr.stmt);
+        VISIT(c, expr, e->v.StmtExpr.value);
+        break;
+    }
     }
     return SUCCESS;
 }

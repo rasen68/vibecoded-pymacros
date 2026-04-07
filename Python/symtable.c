@@ -2266,6 +2266,16 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
     case Continue_kind:
         /* nothing to do here */
         break;
+    case MacroStmt_kind:
+        /* PEP 638: Macro statements are expanded at compile time.
+         * Visit args and body for symbol analysis. */
+        if (s->v.MacroStmt.args) {
+            VISIT_SEQ(st, expr, s->v.MacroStmt.args);
+        }
+        if (s->v.MacroStmt.body) {
+            VISIT_SEQ(st, stmt, s->v.MacroStmt.body);
+        }
+        break;
     case With_kind: {
         ENTER_CONDITIONAL_BLOCK(st);
         VISIT_SEQ(st, withitem, s->v.With.items);
@@ -2656,6 +2666,17 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
         break;
     case Tuple_kind:
         VISIT_SEQ(st, expr, e->v.Tuple.elts);
+        break;
+    case MacroExpr_kind:
+        /* PEP 638: Macro expressions are expanded at compile time. */
+        if (e->v.MacroExpr.args) {
+            VISIT_SEQ(st, expr, e->v.MacroExpr.args);
+        }
+        break;
+    case StmtExpr_kind:
+        /* PEP 638: Statement expression (side-effecting code + value). */
+        VISIT(st, stmt, e->v.StmtExpr.stmt);
+        VISIT(st, expr, e->v.StmtExpr.value);
         break;
     }
     LEAVE_RECURSIVE();
