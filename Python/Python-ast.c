@@ -5347,6 +5347,7 @@ add_ast_annotations(struct ast_state *state)
 typedef struct {
     PyObject_HEAD
     PyObject *dict;
+    int frozen;  /* PEP 638: if true, setattr raises AttributeError */
 } AST_object;
 
 static void
@@ -5378,6 +5379,29 @@ ast_clear(PyObject *op)
     AST_object *self = (AST_object*)op;
     Py_CLEAR(self->dict);
     return 0;
+}
+
+/* PEP 638: Custom setattr that raises AttributeError on frozen nodes.
+ * Nodes can be frozen by calling _freeze() to make them immutable. */
+static int
+ast_setattro(PyObject *self, PyObject *name, PyObject *value)
+{
+    AST_object *obj = (AST_object *)self;
+    if (obj->frozen) {
+        PyErr_Format(PyExc_AttributeError,
+                     "attribute '%U' of immutable AST node '%s' is not writable",
+                     name, _PyType_Name(Py_TYPE(self)));
+        return -1;
+    }
+    return PyObject_GenericSetAttr(self, name, value);
+}
+
+/* PEP 638: _freeze() method to make an AST node immutable. */
+static PyObject *
+ast_type_freeze(PyObject *self, PyObject *Py_UNUSED(ignored))
+{
+    ((AST_object *)self)->frozen = 1;
+    Py_RETURN_NONE;
 }
 
 static int
@@ -5961,6 +5985,10 @@ static PyMethodDef ast_type_methods[] = {
      PyDoc_STR("__replace__($self, /, **fields)\n--\n\n"
                "Return a copy of the AST node with new values "
                "for the specified fields.")},
+    {"_freeze", ast_type_freeze, METH_NOARGS,
+     PyDoc_STR("_freeze($self, /)\n--\n\n"
+               "Make the AST node immutable. After calling _freeze(), "
+               "attribute assignment will raise AttributeError.")},
     {NULL}
 };
 
@@ -6197,7 +6225,7 @@ static PyType_Slot AST_type_slots[] = {
     {Py_tp_dealloc, ast_dealloc},
     {Py_tp_repr, ast_repr},
     {Py_tp_getattro, PyObject_GenericGetAttr},
-    {Py_tp_setattro, PyObject_GenericSetAttr},
+    {Py_tp_setattro, ast_setattro},
     {Py_tp_traverse, ast_traverse},
     {Py_tp_clear, ast_clear},
     {Py_tp_members, ast_type_members},
