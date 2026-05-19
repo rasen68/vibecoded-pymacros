@@ -81,6 +81,7 @@ Summary -- Release highlights
   <whatsnew315-unpacking-in-comprehensions>`
 * :pep:`686`: :ref:`Python now uses UTF-8 as the default encoding
   <whatsnew315-utf8-default>`
+* :pep:`638`: :ref:`Syntactic macros <whatsnew315-syntactic-macros>`
 * :pep:`829`: :ref:`Package startup configuration files <whatsnew315-startup-files>`
 * :pep:`728`: :ref:`TypedDict with typed extra items <whatsnew315-typeddict>`
 * :pep:`747`: :ref:`Annotating type forms with TypeForm
@@ -209,6 +210,46 @@ as lazy, with the same semantics as the ``lazy`` keyword::
 .. seealso:: :pep:`810` for the full specification and rationale.
 
 (Contributed by Pablo Galindo Salgado and Dino Viehland in :gh:`142349`.)
+
+
+.. _whatsnew315-syntactic-macros:
+
+:pep:`638`: Syntactic Macros
+----------------------------
+
+Python now supports syntactic macros, a compile-time metaprogramming facility
+that allows transforming the AST before compilation.
+
+A macro invocation uses an identifier followed by ``!``::
+
+   foo! x
+   foo!(x, y)
+   foo!:
+       body
+
+Expression macros can appear inside expressions::
+
+   y = bar!(x)
+
+Macros are imported at compile time using the ``import!`` and ``from!``
+predefined macros::
+
+   import! my_macros as mm
+   from! my_macros import my_processor as mp
+
+A macro processor is a 4-tuple ``(func, kind, version, additional_names)``
+created by the :func:`macros.macro_processor` decorator::
+
+   import macros, ast
+
+   @macros.macro_processor(macros.STMT_MACRO, 1)
+   def my_macro(node):
+       return ast.Module(body=node.body, type_ignores=[])
+
+The new :mod:`macros` module provides the expansion infrastructure including
+``STMT_MACRO``, ``SIBLING_MACRO``, and ``EXPR_MACRO`` constants.
+
+See :mod:`macros` for full documentation.
 
 
 .. _whatsnew315-frozendict:

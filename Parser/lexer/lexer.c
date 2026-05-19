@@ -792,6 +792,31 @@ tok_get_normal_mode(struct tok_state *tok, tokenizer_mode* current_tok, struct t
             return MAKE_TOKEN(ERRORTOKEN);
         }
 
+        /* PEP 638: Check for macro name (identifier followed by '!').
+         * We must not consume '!' if followed by '=' (that's '!=').
+         * The MACRO_NAME token includes the trailing '!'.
+         * Skip this check inside f-string/t-string expressions where
+         * '!' is used for conversion specifiers (e.g., {x!r}). */
+        if (!INSIDE_FSTRING(tok)) {
+            int c2 = tok_nextc(tok);
+            if (c2 == '!') {
+                int c3 = tok_nextc(tok);
+                if (c3 != '=') {
+                    /* It's a macro name: identifier + '!' */
+                    tok_backup(tok, c3);
+                    p_start = tok->start;
+                    p_end = tok->cur;
+                    return MAKE_TOKEN(MACRO_NAME);
+                }
+                /* '!=' follows identifier: back up both chars */
+                tok_backup(tok, c3);
+                tok_backup(tok, c2);
+            }
+            else {
+                tok_backup(tok, c2);
+            }
+        }
+
         p_start = tok->start;
         p_end = tok->cur;
 

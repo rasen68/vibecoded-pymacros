@@ -250,6 +250,47 @@ class Unparser(NodeVisitor):
         self.write(" import ")
         self.interleave(lambda: self.write(", "), self.traverse, node.names)
 
+    def visit_MacroStmt(self, node):
+        if node.body:
+            self.fill(node.name)
+            if node.args:
+                self.write(" ")
+                self.interleave(lambda: self.write(", "), self.traverse, node.args)
+            if node.importname:
+                self.write(" import ")
+                self.write(node.importname)
+            if node.asname:
+                self.write(" as ")
+                self.write(node.asname)
+            with self.block():
+                self.traverse(node.body)
+        else:
+            self.fill(node.name)
+            if node.args:
+                self.write(" ")
+                self.interleave(lambda: self.write(", "), self.traverse, node.args)
+            if node.importname:
+                self.write(" import ")
+                self.write(node.importname)
+            if node.asname:
+                self.write(" as ")
+                self.write(node.asname)
+
+    def visit_MacroExpr(self, node):
+        self.write(node.name)
+        self.write("(")
+        if node.args:
+            self.interleave(lambda: self.write(", "), self.traverse, node.args)
+        self.write(")")
+
+    def visit_StmtExpr(self, node):
+        # StmtExpr combines a statement and expression value
+        self.write("(")
+        self.traverse(node.stmt)
+        self.write(", ")
+        self.traverse(node.value)
+        self.write(")")
+
     def visit_Assign(self, node):
         self.fill()
         for target in node.targets:

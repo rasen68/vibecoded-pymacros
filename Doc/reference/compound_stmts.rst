@@ -2074,3 +2074,41 @@ less likely to be able to resolve annotations at runtime.
 .. [#] A string literal appearing as the first statement in the class body is
    transformed into the namespace's :attr:`~type.__doc__` item and therefore
    the class's :term:`docstring`.
+
+
+.. _macro:
+
+The :keyword:`!macro` statement
+===============================
+
+.. index::
+   statement: macro
+   pair: syntactic; macro
+
+.. productionlist:: python-grammar
+   macro_stmt: `MACRO_NAME` [`testlist`] ["import" `NAME`] ["as" `NAME`] [":" `suite`]
+
+A macro statement invokes a compile-time macro processor. The ``MACRO_NAME``
+token is an identifier immediately followed by ``!`` (for example, ``foo!``).
+
+Macro statements have several forms:
+
+* Simple: ``foo! x, y``
+* Parenthesized: ``foo!(x, y)``
+* Block: ``foo!:`` followed by an indented suite
+* Import: ``import! module as name`` or ``from! module import name [as alias]``
+
+The ``import!`` and ``from!`` forms are predefined macros that perform
+compile-time imports to register macro processors for the current scope.
+
+When the compiler encounters a macro statement:
+
+1. It looks up the processor registered under that name.
+2. It passes the AST node to the processor callable.
+3. It substitutes the returned AST in place of the original.
+4. It re-enters compilation on the substituted node.
+5. It detects infinite substitution loops (raising :exc:`SyntaxError`).
+
+See :mod:`macros` for more information on defining and using macros.
+
+.. versionadded:: 3.15

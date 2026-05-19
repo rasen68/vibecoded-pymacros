@@ -2362,3 +2362,32 @@ precedence and have a left-to-right chaining feature as described in the
 
 .. [#] The ``%`` operator is also used for string formatting; the same
    precedence applies.
+
+
+.. _macro-expr:
+
+Macro expressions
+=================
+
+.. index::
+   single: macro expression
+
+.. productionlist:: python-grammar
+   macro_expr: `MACRO_NAME` "(" [`testlist`] ")"
+
+A macro expression invokes a compile-time expression macro processor. It
+consists of a ``MACRO_NAME`` (identifier followed by ``!``) and parenthesized
+arguments, for example ``bar!(x)``.
+
+Expression macros can appear anywhere an expression is valid, such as the
+right-hand side of an assignment or as a function argument::
+
+   y = bar!(x)
+   print(transform!(data))
+
+The macro processor receives a :class:`~ast.MacroExpr` AST node and must
+return an :class:`~ast.expr` node.
+
+See :mod:`macros` for more information on defining expression macros.
+
+.. versionadded:: 3.15
